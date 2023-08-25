@@ -7,6 +7,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="sun.jna" level="project" />
+    <orderEntry type="library" name="1stleg.jnativehook" level="project" />
   </component>
 </module>
