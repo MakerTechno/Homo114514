@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Homo114514:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Homo114514_jar</output-path>
+    <root id="archive" name="Homo114514.jar">
+      <element id="module-output" name="Homo114514" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/1stleg/jnativehook/2.1.0/jnativehook-2.1.0.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
