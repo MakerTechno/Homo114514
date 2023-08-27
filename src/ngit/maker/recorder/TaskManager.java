@@ -5,17 +5,42 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
+import java.util.Timer;
 
 public class TaskManager extends JFrame {
-    List<TaskRecorder> recorders = new ArrayList<>();
+
+    boolean allMinimize;
+    boolean allUndecorated;
+    private final List<TaskRecorder> recorders = new ArrayList<>();
     public TaskManager(){
         defaultInit();
 
-        JPanel panel = new JPanel(null);
+        GlobalKeyListener listener = new GlobalKeyListener();
+
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            private boolean isAllHide;
+            private boolean isHideHead;
+            @Override
+            public void run() {
+                if (listener.shiftPressed && listener.ctrlPressed){
+                    if (false){
+
+                    } //else if (global2.f8Pressed){
+                        for (TaskRecorder r : recorders){
+                            r.dispose();
+                            r.setUndecorated(isHideHead);
+                            r.setVisible(true);
+                       // }
+                        isHideHead = !isHideHead;
+                    }
+                }
+            }
+        }, 0, 10);
+
+        JPanel panel = new JPanel(new FlowLayout());
         panel.setSize(getSize());
         panel.setLocation(0, 0);
         addButton(panel);
@@ -51,7 +76,36 @@ public class TaskManager extends JFrame {
             }
             System.out.println("\n");
         });
+
+        JButton button1 = getjButton();
+
         panel.add(button);
+        panel.add(button1);
+    }
+
+    private JButton getjButton() {
+        JButton button1 = new JButton("测试1");
+        button1.setSize(70, 30);
+        button1.addActionListener(e -> {
+            for (TaskRecorder r : recorders){
+                if (r.isUndecorated() != allUndecorated){
+                    if (allUndecorated){
+                        r.setSize(r.getWidth(),r.getHeight()-r.getInsets().top);
+                        r.setLocation(r.getX(), r.getY()+r.getInsets().top);
+                    }
+                    r.dispose();
+                    r.setUndecorated(allUndecorated);
+                    r.setVisible(true);
+                    if (!allUndecorated){
+                        r.setSize(r.getWidth(), r.getHeight()+r.getInsets().top);
+                        r.setLocation(r.getX(), r.getY()-r.getInsets().top);
+                        r.repaint();
+                    }
+                }
+            }
+            allUndecorated = !allUndecorated;
+        });
+        return button1;
     }
 }
 
@@ -60,6 +114,7 @@ class TaskRecorder extends JFrame {
     private JTextArea area;
     public TaskRecorder(List<TaskRecorder> recorders){
         defaultInit(recorders);
+
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.setSize(this.getSize());
@@ -118,7 +173,8 @@ class TaskRecorder extends JFrame {
 }
 
 class TaskSaver{
-    public static void saveTasks(TaskRecorder[] recorders){
+    public static void saveTasks(TaskRecorder[] recorders, Properties properties){
 
     }
+
 }
