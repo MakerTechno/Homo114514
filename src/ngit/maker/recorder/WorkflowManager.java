@@ -13,36 +13,39 @@ import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**Main frame, as an easy manager.
+ * include info for all text pane: {@link WorkflowRecorderPane}*/
 public class WorkflowManager extends JFrame {
+    /*Belows are the statics.*/
+    /**A final timer, hold the {@link WorkflowSaver} task and so on.*/
+    public static final Timer TIMER = new Timer();
 
-    boolean allMinimize;
-    boolean allUndecorated;
+    /*Belows are the dynamics.*/
+    /**We need a logger to log for whole sys.*/
+    public final Logger logger;
+    /**We need a saver system to save user's records, too.*/
+    private final WorkflowSaver saver;
+
+    private final String saveTime;
+
+    /*-These headed the basic state of all text pane.*/
+    public boolean allMinimize;
+    public boolean allUndecorated;
+
+    /**This is a recorder list, contains all the text pane that still lives.*/
     private final List<WorkflowRecorderPane> recorders = new ArrayList<>();
-    public WorkflowManager(String startTime){
-        defaultInit();
 
-        GlobalKeyListener listener = new GlobalKeyListener();
 
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            private boolean isAllHide;
-            private boolean isHideHead;
-            @Override
-            public void run() {
-                if (listener.shiftPressed && listener.ctrlPressed){
-                    if (false){
+    /**Construction method.*/
+    public WorkflowManager(String startTime, Logger logger){
+        /*Init some constants here.*/
+        this.logger = logger;
+        saver = new WorkflowSaver(logger);
+        saveTime = startTime;
 
-                    } //else if (global2.f8Pressed){
-                        for (WorkflowRecorderPane r : recorders){
-                            r.dispose();
-                            r.setUndecorated(isHideHead);
-                            r.setVisible(true);
-                       // }
-                        isHideHead = !isHideHead;
-                    }
-                }
-            }
-        }, 0, 10);
+        /*Using method setups here.*/
+        defaultInit(this);
+
 
         JPanel panel = new JPanel(new FlowLayout());
         panel.setSize(getSize());
@@ -52,19 +55,29 @@ public class WorkflowManager extends JFrame {
         add(panel);
         setVisible(true);
     }
-    public void defaultInit(){
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(500, 300);
-        setLocationRelativeTo(null);
-        setLayout(null);
 
-        addWindowListener(new WindowAdapter() {
+    public void defaultInit(JFrame frame){
+        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        frame.setSize(500, 300);
+        frame.setLocationRelativeTo(null);   //Then frame will be right at the middle of teh screen.
+        frame.setLayout(null);
+        //Listening on window close.
+        frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-
+                // TODO: 2023/8/30 Add something to save
                 super.windowClosing(e);
             }
         });
+
+        TIMER.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                saver.saveTasks(recorders, saveTime);
+                System.out.println("Saved.");
+            }
+        }, 0, 1000);
+
     }
 
 
@@ -170,7 +183,7 @@ class WorkflowRecorderPane extends JFrame {
     }
 
     public void timeInit(){
-        SimpleDateFormat sdf2 = new SimpleDateFormat("[yyyy-MM-dd HH:mm:ss:SSS]");
+        SimpleDateFormat sdf2 = new SimpleDateFormat("[yyyy-MM-dd_HH-mm-ss-SSS]");
         createdTime = sdf2.format(new Date());
     }
 
@@ -201,20 +214,28 @@ class WorkflowSaver{
     private final String STORE_PLACE_DEFAULT = MAKER_APPLICATION_PORT + "\\WorkflowMgr\\saves";
     private final String STORE_PASSWORD_KEY = "WFM-You know it:";
     private final String STORE_PASSWORD_DEFAULT = "1145141919810";
+    private final String STORE_MINIMIZE_KEYBOARD_KEY = "Minimize hotkey: ";
+    private final String STORE_MINIMIZE_KEYBOARD_DEFAULT = "Ctrl_Shift_F7";
+    private final String STORE_EXIT_KEYBOARD_KEY = "Exit hotkey: ";
+    private final String STORE_EXIT_KEYBOARD_DEFAULT = "Ctrl_Shift_F8";
+    private final String STORE_UNDECORATED_KEYBOARD_KEY = "Undecorated hotkey: ";
+    private final String STORE_UNDECORATED_KEYBOARD_DEFAULT = "Ctrl_Shift_F9";
+    private final String STORE_SAVE_KEYBOARD_KEY = "Save hotkey: ";
+    private final String STORE_SAVE_KEYBOARD_DEFAULT = "Ctrl_S";
 
-    public final Logger logger;
-    public final Properties properties;
+    private final Logger logger;
+    private final Properties properties;
 
-    public enum PropertiesExistKnockBack{
+    private enum PropertiesExistKnockBack{
         TRULY_EXIST,
         CANT_READ,
         CANT_WRITE,
         NOTHING_IN,
         NOT_CORRECT,
-        NOT_EXIST;
+        NOT_EXIST
     }
 
-    interface ReadSupplier{
+    public interface ReadSupplier{
         String getObj();
         boolean isValid();
         static ReadSupplier returnValidOne(final String string){
@@ -226,10 +247,10 @@ class WorkflowSaver{
                 public boolean isValid() {return true;}
             };
         }
-        static ReadSupplier returnInvalidOne(){
+        static ReadSupplier returnInvalidOne(final String string){
             return new ReadSupplier() {
                 @Override
-                public String getObj() {return null;}
+                public String getObj() {return string;}
                 @Override
                 public boolean isValid() {return false;}
             };
@@ -247,7 +268,11 @@ class WorkflowSaver{
     }
 
     public boolean createDirAndFile(File file) throws IOException {
-        if (!file.exists()) return file.createNewFile();
+        if (!file.exists()) {
+            if (file.isDirectory() && !file.exists()) return file.mkdirs();
+            else if (!file.getParentFile().exists()) return file.getParentFile().mkdirs() && file.createNewFile();
+            else return file.createNewFile();
+        }
         else return false;
     }
 
@@ -279,11 +304,12 @@ class WorkflowSaver{
         PropertiesExistKnockBack knockBack = readPropertiesCheck(logger);
 
         if (knockBack.equals(PropertiesExistKnockBack.NOT_CORRECT)){
+            logger.log(Level.INFO, "Properties file not correct, try to refresh.");
             if(refreshProperties()) {
                 logger.log(Level.INFO, "Successfully refresh properties file.");
             } else {
                 logger.log(Level.SEVERE, "Couldn't refresh your properties.");
-                return ReadSupplier.returnInvalidOne();
+                return ReadSupplier.returnInvalidOne(defaultKey);
             }
         } else if (knockBack.equals(PropertiesExistKnockBack.NOT_EXIST)){
             try {
@@ -294,20 +320,20 @@ class WorkflowSaver{
                     logger.log(Level.INFO, "Successfully refresh properties file.");
                 } else {
                     logger.log(Level.SEVERE, "Couldn't refresh your properties.");
-                    return ReadSupplier.returnInvalidOne();
+                    return ReadSupplier.returnInvalidOne(defaultKey);
                 }
             } catch (IOException e) {
                 logger.log(Level.SEVERE, "Can't create new user profile: ", e);
-                return ReadSupplier.returnInvalidOne();
+                return ReadSupplier.returnInvalidOne(defaultKey);
             }
         } else if (knockBack.equals(PropertiesExistKnockBack.CANT_READ) || knockBack.equals(PropertiesExistKnockBack.CANT_WRITE)){
-            return ReadSupplier.returnInvalidOne();
+            return ReadSupplier.returnInvalidOne(defaultKey);
         } else if (knockBack.equals(PropertiesExistKnockBack.NOTHING_IN)){
             if(refreshProperties()) {
                 logger.log(Level.INFO, "Successfully refresh properties file.");
             } else {
                 logger.log(Level.SEVERE, "Couldn't refresh your properties.");
-                return ReadSupplier.returnInvalidOne();
+                return ReadSupplier.returnInvalidOne(defaultKey);
             }
         }
         return ReadSupplier.returnValidOne(properties.getProperty(key, defaultKey));
@@ -354,6 +380,7 @@ class WorkflowSaver{
     public ReadSupplier readStorePlace(){
         return readProperty(STORE_PLACE_KEY, STORE_PLACE_DEFAULT);
     }
+
     public boolean setStorePlaintextPassword(final String newPassword){
         properties.setProperty(STORE_PASSWORD_KEY, newPassword);
         return commitChange();
@@ -361,10 +388,42 @@ class WorkflowSaver{
     public ReadSupplier readStorePlaintextPassword(){
         return readProperty(STORE_PASSWORD_KEY, STORE_PASSWORD_DEFAULT);
     }
+    public boolean setMinimizeHotkey(final String newKeyArray){
+        properties.setProperty(STORE_MINIMIZE_KEYBOARD_KEY, newKeyArray);
+        return commitChange();
+    }
+    public ReadSupplier readMinimizeHotkey(){
+        return readProperty(STORE_MINIMIZE_KEYBOARD_KEY, STORE_MINIMIZE_KEYBOARD_DEFAULT);
+    }
+    public boolean setExitHotkey(final String newKeyArray){
+        properties.setProperty(STORE_EXIT_KEYBOARD_KEY, newKeyArray);
+        return commitChange();
+    }
+    public ReadSupplier readExitHotkey(){
+        return readProperty(STORE_EXIT_KEYBOARD_KEY, STORE_EXIT_KEYBOARD_DEFAULT);
+    }
+    public boolean setUndecoratedHotkey(final String newKeyArray){
+        properties.setProperty(STORE_UNDECORATED_KEYBOARD_KEY, newKeyArray);
+        return commitChange();
+    }
+    public ReadSupplier readUndecoratedHotkey(){
+        return readProperty(STORE_UNDECORATED_KEYBOARD_KEY, STORE_UNDECORATED_KEYBOARD_DEFAULT);
+    }
+    public boolean setSaveHotkey(final String newKeyArray){
+        properties.setProperty(STORE_SAVE_KEYBOARD_KEY, newKeyArray);
+        return commitChange();
+    }
+    public ReadSupplier readSaveHotkey(){
+        return readProperty(STORE_SAVE_KEYBOARD_KEY, STORE_SAVE_KEYBOARD_DEFAULT);
+    }
 
     public boolean refreshProperties(){
         properties.setProperty(STORE_PLACE_KEY, STORE_PLACE_DEFAULT);
         properties.setProperty(STORE_PASSWORD_KEY, STORE_PASSWORD_DEFAULT);
+        properties.setProperty(STORE_MINIMIZE_KEYBOARD_KEY, STORE_MINIMIZE_KEYBOARD_DEFAULT);
+        properties.setProperty(STORE_EXIT_KEYBOARD_KEY, STORE_EXIT_KEYBOARD_DEFAULT);
+        properties.setProperty(STORE_UNDECORATED_KEYBOARD_KEY, STORE_UNDECORATED_KEYBOARD_DEFAULT);
+        properties.setProperty(STORE_SAVE_KEYBOARD_KEY, STORE_SAVE_KEYBOARD_DEFAULT);
         return commitChange();
     }
     public void saveTasks(List<WorkflowRecorderPane> recorders, String startTime) {
@@ -376,7 +435,7 @@ class WorkflowSaver{
             iteratorFile = new File(path.getAbsolutePath() + File.separator + recorder.getCreatedTime() + ".rot");
             try {
                 if (!iteratorFile.exists()) {
-                    if (!iteratorFile.createNewFile())
+                    if (!createDirAndFile(iteratorFile))
                         throw new IOException("I can't create file record for your new task, sorry(TwT)");
                 }
 
