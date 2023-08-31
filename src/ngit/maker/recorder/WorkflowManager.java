@@ -26,7 +26,7 @@ public class WorkflowManager extends JFrame {
     /**We need a saver system to save user's records, too.*/
     private final WorkflowSaver saver;
 
-    private final String saveTime;
+    private String saveTime;
 
     /*-These headed the basic state of all text pane.*/
     public boolean allMinimize;
@@ -44,91 +44,170 @@ public class WorkflowManager extends JFrame {
         saveTime = startTime;
 
         /*Using method setups here.*/
-        defaultInit(this);
+        basicSetup(this);
 
-
-        JPanel panel = new JPanel(new FlowLayout());
-        panel.setSize(getSize());
-        panel.setLocation(0, 0);
-        addButton(panel);
-
-        add(panel);
+        /*Add element to main frame.*/
+        add(utilSetup(this));
         setVisible(true);
     }
 
-    public void defaultInit(JFrame frame){
+    /**Setup some basic properties.*/
+    public void basicSetup(JFrame frame){
         frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
         frame.setSize(500, 300);
-        frame.setLocationRelativeTo(null);   //Then frame will be right at the middle of teh screen.
         frame.setLayout(null);
-        //Listening on window close.
+        frame.setLocationRelativeTo(null);//Then frame will be right at the middle of teh screen.
+
+        /*Listening on window close to save all works.*/
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                // TODO: 2023/8/30 Add something to save
+                if (!recorders.isEmpty()){
+                    saver.saveTasks(recorders, saveTime);
+                    logger.finest("Your work have been saved successfully.");
+                }
                 super.windowClosing(e);
             }
         });
 
+        /*This timer runs every second, we protect users work.*/
         TIMER.schedule(new TimerTask() {
             @Override
             public void run() {
                 saver.saveTasks(recorders, saveTime);
-                System.out.println("Saved.");
+                logger.finest("Your work have been saved successfully.");
             }
-        }, 0, 1000);
-
+        }, 0, 1000*60);
     }
 
 
-    public void addButton(JPanel panel){
-        JButton button = new JButton("新建");
-        button.setSize(70, 30);
-        button.setLocation((panel.getWidth()-button.getWidth())/2, (panel.getHeight()-button.getHeight())/2);
-        button.addActionListener(e -> {
-            WorkflowRecorderPane recorder = new WorkflowRecorderPane(recorders);
-            recorders.add(recorder);
+    public JPanel utilSetup(JFrame frame){
+        /*A JPanel holding all the buttons here*/
+        JPanel panel = new JPanel(new FlowLayout());
+        panel.setLocation(0, 0);
+        panel.setSize(frame.getSize());
+
+        /*Add elements.*/
+        panel.add(createPaneBtnSetup());
+        panel.add(undecoratedBtnSetup());
+        panel.add(allMinimizeBtnSetup());
+        panel.add(allCloseBtnSetup());
+
+        return panel;
+    }
+
+    private JButton createPaneBtnSetup(){
+        /*1st button.*/
+        JButton createTextPane = new JButton("新建");
+        createTextPane.setSize(70, 30);
+
+        /*Happens on button click.*/
+        createTextPane.addActionListener(e -> {
+            /*Generate a new pane and add a new frame to list.*/
+            recorders.add(new WorkflowRecorderPane(recorders));
+
+            StringBuilder builder = new StringBuilder();
+            int count = 0;
+
             for (WorkflowRecorderPane r : recorders){
-                System.out.println(r.getCreatedTime());
+                builder.append("[").append(count).append("]").append(r.getCreatedTime()).append("; ");
             }
-            System.out.println("\n");
+            /*Log out all the pane exist at this time.*/
+            logger.log(Level.CONFIG,builder.toString());
         });
 
-        JButton button1 = getjButton();
-
-        panel.add(button);
-        panel.add(button1);
+        return createTextPane;
     }
 
-    private JButton getjButton() {
-        JButton button1 = new JButton("测试1");
-        button1.setSize(70, 30);
-        button1.addActionListener(e -> {
+    private JButton undecoratedBtnSetup() {
+        /*2nd button.*/
+        JButton undecoratedChange = new JButton("全部取消标题栏");
+        undecoratedChange.setSize(120, 30);
+
+        /*Happens on button click.*/
+        undecoratedChange.addActionListener(e -> {
+            //First change the undecorated boolean(switch)
+            allUndecorated = !allUndecorated;
+
+            /*Run check for every pane and change unexpected frames.*/
             for (WorkflowRecorderPane r : recorders){
                 if (r.isUndecorated() != allUndecorated){
+                    /*We need to change some location problem before title change start, if it's undecorated.*/
                     if (allUndecorated){
                         r.setSize(r.getWidth(),r.getHeight()-r.getInsets().top);
                         r.setLocation(r.getX(), r.getY()+r.getInsets().top);
                     }
+
+                    /*Must release the frame, then undecorated settings will be accepted.*/
                     r.dispose();
                     r.setUndecorated(allUndecorated);
+                    //Then repaint.
                     r.setVisible(true);
+
+                    /*We also need some changes after, if it's not undecorated.*/
                     if (!allUndecorated){
                         r.setSize(r.getWidth(), r.getHeight()+r.getInsets().top);
                         r.setLocation(r.getX(), r.getY()-r.getInsets().top);
-                        r.repaint();
+
+                        r.repaint();//It's for some unforeseeable problems about frame displays.
                     }
                 }
             }
-            allUndecorated = !allUndecorated;
+
+            /*After all, we still need to change the text on the button, too.*/
+            if (allUndecorated) undecoratedChange.setText("全部显示标题栏");
+            else undecoratedChange.setText("全部取消标题栏");
         });
-        return button1;
+
+        return undecoratedChange;
+    }
+
+    private JButton allMinimizeBtnSetup(){
+        JButton minimizeAll = new JButton("全部最小化");
+        minimizeAll.setSize(100, 30);
+
+        minimizeAll.addActionListener(e -> {
+            //First change the minimize boolean(switch)
+            allMinimize = !allMinimize;
+
+            //Then translate this boolean to variable for chooser.
+            int transState = allMinimize ? Frame.ICONIFIED : Frame.NORMAL;
+
+            /*Run check for every pane and change unexpected frames.*/
+            for (WorkflowRecorderPane pane : recorders){
+                if (pane.getState() != transState) pane.setState(transState);
+            }
+
+            /*After all, we still need to change the text on the button, too.*/
+            if (allMinimize) minimizeAll.setText("全部还原");
+            else minimizeAll.setText("全部最小化");
+        });
+
+        return minimizeAll;
+    }
+
+    private JButton allCloseBtnSetup(){
+        JButton closeAll = new JButton("全部关闭");
+        closeAll.setSize(70, 30);
+
+        closeAll.addActionListener(e -> {
+            if (recorders != null) {
+                saver.saveTasks(recorders, saveTime);
+                for (WorkflowRecorderPane pane : recorders) {
+                    pane.dispose();
+                }
+                recorders.clear();
+            }
+        });
+
+        return closeAll;
     }
 }
 
 class WorkflowRecorderPane extends JFrame {
     private String createdTime;
     private JTextArea area;
+    private int myPlace;
     public WorkflowRecorderPane(List<WorkflowRecorderPane> recorders){
         defaultInit(recorders);
         timeInit();
@@ -171,6 +250,7 @@ class WorkflowRecorderPane extends JFrame {
                     for (WorkflowRecorderPane r : recorders) {
                         if (Objects.equals(r.createdTime, createdTime)) {
                             recorders.remove(count);
+                            flushInterface(recorders);
                             break;
                         }
                         count++;
@@ -203,6 +283,29 @@ class WorkflowRecorderPane extends JFrame {
 
     public String  getCreatedTime() {
         return createdTime;
+    }
+
+    public void flushInterface(List<WorkflowRecorderPane> recorders){
+        int count = 0;
+        if (!recorders.isEmpty()) {
+            for (WorkflowRecorderPane r : recorders) {
+                if (Objects.equals(r.createdTime, createdTime)) {
+                    myPlace = ++count;
+                    break;
+                }
+                count++;
+            }
+        }
+    }
+
+
+    @Override
+    public void paint(Graphics g) {
+        super.paint(g);
+        Graphics2D g2 = (Graphics2D)g ;
+        g2.setColor(new Color(92, 92, 92, 132));
+        g2.setFont(new Font("Inconsolata", Font.BOLD, 20));
+        g2.drawString(String.valueOf(myPlace), 10, 30);
     }
 }
 
