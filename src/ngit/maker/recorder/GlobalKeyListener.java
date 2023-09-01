@@ -9,7 +9,7 @@ public class GlobalKeyListener {
         MINIMIZE_KEY_MARK,//最小化的热键标识
         EXIT_ALL_KEY_MARK,//关闭的热键标识
         UNDECORATED_KEY_MARK,//无标题栏的热键标识
-        SAVE_KEY_MARK;//保存的热键标识
+        SAVE_KEY_MARK//保存的热键标识
     }
     public IKeyPack[] keyPacks;
     private Runnable[] runnables;
@@ -21,7 +21,7 @@ public class GlobalKeyListener {
         int getKeyInt();
         static IKeyPack newPack(KEY_TAGS keyMark, int mod, int key){
             return new IKeyPack() {
-                public int getKeyMark() {return keyMark.ordinal();};
+                public int getKeyMark() {return keyMark.ordinal();}
                 public int getModInt() {return mod;}
                 public int getKeyInt() {return key;}
             };
@@ -46,13 +46,13 @@ public class GlobalKeyListener {
     }
 
     private void resetKeysSecret(IKeyPack keyPackMin, IKeyPack keyPackExit, IKeyPack keyPackUnd, IKeyPack keyPackSave){
-        keyPacks = new IKeyPack[] {keyPackMin, keyPackExit, keyPackUnd, keyPackSave};
         for (IKeyPack pack : keyPacks) {
             JIntellitype.getInstance().registerHotKey(pack.getKeyMark(), pack.getModInt(), pack.getKeyInt());
         }
     }
 
     public void resetKeys(IKeyPack keyPackMin, IKeyPack keyPackExit, IKeyPack keyPackUnd, IKeyPack keyPackSave) {
+        keyPacks = new IKeyPack[] {keyPackMin, keyPackExit, keyPackUnd, keyPackSave};
         JIntellitype.getInstance().removeHotKeyListener(hotkeyListener);
         for (IKeyPack keyPack : keyPacks) {
             JIntellitype.getInstance().unregisterHotKey(keyPack.getKeyMark());

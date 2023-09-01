@@ -50,4 +50,27 @@ public enum JKeys {
             case DOWN_ARROW_KEY -> 40;
         };
     }
+
+    public static int getByName(String s) throws IllegalArgumentException{
+        return JKeys.valueOf(s).getIntValue();
+    }
+}
+
+enum IKeys{
+    ALT,
+    CONTROL,
+    SHIFT,
+    WIN;
+
+    public int getIntValue(){
+        return switch (this){
+            case ALT -> 1;
+            case CONTROL -> 2;
+            case SHIFT -> 4;
+            case WIN -> 8;
+        };
+    }
+    public static int getByName(String s) throws IllegalArgumentException{
+        return IKeys.valueOf(s).getIntValue();
+    }
 }

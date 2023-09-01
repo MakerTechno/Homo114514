@@ -1,5 +1,7 @@
 package ngit.maker.recorder;
 
+import com.melloware.jintellitype.JIntellitype;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
@@ -63,8 +65,12 @@ public class WorkflowManager extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 if (!recorders.isEmpty()){
-                    saver.saveTasks(recorders, saveTime);
-                    logger.finest("Your work have been saved successfully.");
+                    try {
+                        saver.saveTasks(recorders, saveTime);
+                        logger.finest("Your work have been saved successfully.");
+                    } catch (IOException ex) {
+                        logger.log(Level.SEVERE, "Could not read store place: ", ex);
+                    }
                 }
                 super.windowClosing(e);
             }
@@ -74,10 +80,15 @@ public class WorkflowManager extends JFrame {
         TIMER.schedule(new TimerTask() {
             @Override
             public void run() {
-                saver.saveTasks(recorders, saveTime);
-                logger.finest("Your work have been saved successfully.");
+                try {
+                    saver.saveTasks(recorders, saveTime);
+                    logger.finest("Your work have been saved successfully.");
+                } catch (IOException e) {
+                    logger.log(Level.SEVERE, "Could not read store place: ", e);
+                }
             }
         }, 0, 1000*60);
+
     }
 
 
@@ -89,9 +100,31 @@ public class WorkflowManager extends JFrame {
 
         /*Add elements.*/
         panel.add(createPaneBtnSetup());
-        panel.add(undecoratedBtnSetup());
-        panel.add(allMinimizeBtnSetup());
+        JButton undecoratedBtn = undecoratedBtnSetup();
+        panel.add(undecoratedBtn);
+        JButton minimizeBtn = allMinimizeBtnSetup();
+        panel.add(minimizeBtn);
         panel.add(allCloseBtnSetup());
+        panel.add(allSaveBtnSetup());
+
+
+        WorkflowSaver.ReadSupplier minimizeHotkey = saver.readMinimizeHotkey();
+        WorkflowSaver.ReadSupplier undecoratedHotkey = saver.readUndecoratedHotkey();
+        WorkflowSaver.ReadSupplier exitHotkey = saver.readExitHotkey();
+        WorkflowSaver.ReadSupplier saveHotkey = saver.readSaveHotkey();
+        if (!(minimizeHotkey.isValid()&&undecoratedHotkey.isValid()&&exitHotkey.isValid()&&saveHotkey.isValid())){
+            JOptionPane.showConfirmDialog(frame, "Fatal on key reading! now using default. See more at logs.");
+        }
+
+        GlobalKeyListener.IKeyPack[] packs = new GlobalKeyListener.IKeyPack[] {
+                saver.translateKeys(minimizeHotkey.getObj(), GlobalKeyListener.KEY_TAGS.MINIMIZE_KEY_MARK),
+                saver.translateKeys(undecoratedHotkey.getObj(), GlobalKeyListener.KEY_TAGS.UNDECORATED_KEY_MARK),
+                saver.translateKeys(exitHotkey.getObj(), GlobalKeyListener.KEY_TAGS.EXIT_ALL_KEY_MARK),
+                saver.translateKeys(saveHotkey.getObj(), GlobalKeyListener.KEY_TAGS.SAVE_KEY_MARK)
+        };
+        GlobalKeyListener listener = new GlobalKeyListener(packs[0], packs[1], packs[2], packs[3]);
+        listener.setKeyListeners(getMinimizeRuns(minimizeBtn), getUndecoratedRuns(undecoratedBtn),
+                getSaveRuns(true), getSaveRuns(false));
 
         return panel;
     }
@@ -104,7 +137,9 @@ public class WorkflowManager extends JFrame {
         /*Happens on button click.*/
         createTextPane.addActionListener(e -> {
             /*Generate a new pane and add a new frame to list.*/
-            recorders.add(new WorkflowRecorderPane(recorders));
+            WorkflowRecorderPane pane  = new WorkflowRecorderPane(recorders);
+            recorders.add(pane);
+            pane.flushInterface(recorders);
 
             StringBuilder builder = new StringBuilder();
             int count = 0;
@@ -125,7 +160,14 @@ public class WorkflowManager extends JFrame {
         undecoratedChange.setSize(120, 30);
 
         /*Happens on button click.*/
-        undecoratedChange.addActionListener(e -> {
+        undecoratedChange.addActionListener(e -> getUndecoratedRuns(undecoratedChange).run());
+
+        return undecoratedChange;
+    }
+
+    private Runnable getUndecoratedRuns(JButton button){
+        return () -> {
+
             //First change the undecorated boolean(switch)
             allUndecorated = !allUndecorated;
 
@@ -155,18 +197,22 @@ public class WorkflowManager extends JFrame {
             }
 
             /*After all, we still need to change the text on the button, too.*/
-            if (allUndecorated) undecoratedChange.setText("全部显示标题栏");
-            else undecoratedChange.setText("全部取消标题栏");
-        });
-
-        return undecoratedChange;
+            if (allUndecorated) button.setText("全部显示标题栏");
+            else button.setText("全部取消标题栏");
+        };
     }
 
     private JButton allMinimizeBtnSetup(){
         JButton minimizeAll = new JButton("全部最小化");
         minimizeAll.setSize(100, 30);
 
-        minimizeAll.addActionListener(e -> {
+        minimizeAll.addActionListener(e -> getMinimizeRuns(minimizeAll).run());
+
+        return minimizeAll;
+    }
+
+    private Runnable getMinimizeRuns(JButton button){
+        return () -> {
             //First change the minimize boolean(switch)
             allMinimize = !allMinimize;
 
@@ -179,29 +225,49 @@ public class WorkflowManager extends JFrame {
             }
 
             /*After all, we still need to change the text on the button, too.*/
-            if (allMinimize) minimizeAll.setText("全部还原");
-            else minimizeAll.setText("全部最小化");
-        });
-
-        return minimizeAll;
+            if (allMinimize) button.setText("全部还原");
+            else button.setText("全部最小化");
+        };
     }
 
     private JButton allCloseBtnSetup(){
         JButton closeAll = new JButton("全部关闭");
         closeAll.setSize(70, 30);
 
-        closeAll.addActionListener(e -> {
-            if (recorders != null) {
-                saver.saveTasks(recorders, saveTime);
-                for (WorkflowRecorderPane pane : recorders) {
-                    pane.dispose();
-                }
-                recorders.clear();
-            }
-        });
+        closeAll.addActionListener(e -> getSaveRuns(true).run());
 
         return closeAll;
     }
+
+
+    private JButton allSaveBtnSetup(){
+        JButton saveAll = new JButton("全部保存");
+        saveAll.setSize(70, 30);
+
+        saveAll.addActionListener(e -> getSaveRuns(false).run());
+
+        return saveAll;
+    }
+
+    private Runnable getSaveRuns(boolean shouldClose){
+        return () -> {
+            if (recorders != null) {
+                try {
+                    saver.saveTasks(recorders, saveTime);
+                    logger.finest("Your work have been saved successfully.");
+                    if (shouldClose){
+                        for (WorkflowRecorderPane pane : recorders) {
+                            pane.dispose();
+                        }
+                        recorders.clear();
+                    }
+                } catch (IOException ex) {
+                    logger.log(Level.SEVERE, "Could not read store place: ", ex);
+                }
+            }
+        };
+    }
+
 }
 
 class WorkflowRecorderPane extends JFrame {
@@ -210,7 +276,6 @@ class WorkflowRecorderPane extends JFrame {
     private int myPlace;
     public WorkflowRecorderPane(List<WorkflowRecorderPane> recorders){
         defaultInit(recorders);
-        timeInit();
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.setSize(this.getSize());
@@ -242,6 +307,9 @@ class WorkflowRecorderPane extends JFrame {
         setLocationRelativeTo(null);
         setAlwaysOnTop(true);
         setLayout(new BorderLayout());
+
+        timeInit();
+
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -250,12 +318,12 @@ class WorkflowRecorderPane extends JFrame {
                     for (WorkflowRecorderPane r : recorders) {
                         if (Objects.equals(r.createdTime, createdTime)) {
                             recorders.remove(count);
-                            flushInterface(recorders);
                             break;
                         }
                         count++;
                     }
 
+                    flushInterface(recorders);
                     super.windowClosing(e);
                 }
             }
@@ -286,11 +354,12 @@ class WorkflowRecorderPane extends JFrame {
     }
 
     public void flushInterface(List<WorkflowRecorderPane> recorders){
-        int count = 0;
+        int count = 1;
         if (!recorders.isEmpty()) {
             for (WorkflowRecorderPane r : recorders) {
-                if (Objects.equals(r.createdTime, createdTime)) {
-                    myPlace = ++count;
+                if (r.myPlace != count) {
+                    r.myPlace = count;
+                    r.repaint();
                     break;
                 }
                 count++;
@@ -307,6 +376,13 @@ class WorkflowRecorderPane extends JFrame {
         g2.setFont(new Font("Inconsolata", Font.BOLD, 20));
         g2.drawString(String.valueOf(myPlace), 10, 30);
     }
+
+    @Override
+    public void repaint() {
+        super.repaint();
+        Graphics2D g2 = (Graphics2D) getGraphics();
+        g2.drawString(String.valueOf(myPlace), 10, 30);
+    }
 }
 
 class WorkflowSaver{
@@ -318,13 +394,13 @@ class WorkflowSaver{
     private final String STORE_PASSWORD_KEY = "WFM-You know it:";
     private final String STORE_PASSWORD_DEFAULT = "1145141919810";
     private final String STORE_MINIMIZE_KEYBOARD_KEY = "Minimize hotkey: ";
-    private final String STORE_MINIMIZE_KEYBOARD_DEFAULT = "Ctrl_Shift_F7";
+    private final String STORE_MINIMIZE_KEYBOARD_DEFAULT = "CONTROL_SHIFT_F7";
     private final String STORE_EXIT_KEYBOARD_KEY = "Exit hotkey: ";
-    private final String STORE_EXIT_KEYBOARD_DEFAULT = "Ctrl_Shift_F8";
+    private final String STORE_EXIT_KEYBOARD_DEFAULT = "CONTROL_SHIFT_F8";
     private final String STORE_UNDECORATED_KEYBOARD_KEY = "Undecorated hotkey: ";
-    private final String STORE_UNDECORATED_KEYBOARD_DEFAULT = "Ctrl_Shift_F9";
+    private final String STORE_UNDECORATED_KEYBOARD_DEFAULT = "CONTROL_SHIFT_F9";
     private final String STORE_SAVE_KEYBOARD_KEY = "Save hotkey: ";
-    private final String STORE_SAVE_KEYBOARD_DEFAULT = "Ctrl_S";
+    private final String STORE_SAVE_KEYBOARD_DEFAULT = "CONTROL_S";
 
     private final Logger logger;
     private final Properties properties;
@@ -529,7 +605,11 @@ class WorkflowSaver{
         properties.setProperty(STORE_SAVE_KEYBOARD_KEY, STORE_SAVE_KEYBOARD_DEFAULT);
         return commitChange();
     }
-    public void saveTasks(List<WorkflowRecorderPane> recorders, String startTime) {
+    public void saveTasks(List<WorkflowRecorderPane> recorders, String startTime) throws IOException {
+        ReadSupplier supplier = readStorePlace();
+        if (!supplier.isValid()) {
+            throw new IOException("Can't read save place, please check if sth went wrong before this error");
+        }
         File path = new File(readStorePlace().getObj() + File.separator + startTime);
         File iteratorFile;
 
@@ -556,11 +636,12 @@ class WorkflowSaver{
         File path = new File(readStorePlace().getObj() + File.separator + startTime);
 
         for (File recorderFile : Objects.requireNonNull(path.listFiles())) {
-            WorkflowRecorderPane pane = new WorkflowRecorderPane(recorders, recorderFile.getName());
             try {
                 if (!recorderFile.canRead()) throw new IOException("I can't read file record from your saves, sorry(TwT)");
                 Files.readAllBytes(recorderFile.toPath());
+                WorkflowRecorderPane pane = new WorkflowRecorderPane(recorders, recorderFile.getName());
                 recorders.add(pane);
+                pane.flushInterface(recorders);
             } catch (IOException e) {
                 logger.log(Level.SEVERE, "Can't read work record \"" + recorderFile.getName() + "\" task:", e);
             } catch (NullPointerException e){
@@ -568,5 +649,23 @@ class WorkflowSaver{
             }
         }
         return recorders;
+    }
+
+    public GlobalKeyListener.IKeyPack translateKeys(String keys, GlobalKeyListener.KEY_TAGS forType){
+        String[] kSeparated = keys.split("_");
+        int basicNum = 0;
+        int apartKey = 0;
+        for (int count = kSeparated.length - 1; count>=0; count--){
+            try {
+                if (count != kSeparated.length - 1) {
+                    basicNum += IKeys.getByName(kSeparated[count]);
+                } else {
+                    apartKey = JKeys.getByName(kSeparated[count]);
+                }
+            } catch (IllegalArgumentException e) {
+                logger.log(Level.SEVERE, "Error at reading key settings: ", e);
+            }
+        }
+        return GlobalKeyListener.IKeyPack.newPack(forType, basicNum, apartKey);
     }
 }
