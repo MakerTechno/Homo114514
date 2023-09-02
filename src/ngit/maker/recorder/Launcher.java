@@ -1,5 +1,7 @@
 package ngit.maker.recorder;
 
+import ngit.maker.recorder.workflow.WorkflowManager;
+
 import javax.swing.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;

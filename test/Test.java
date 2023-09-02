@@ -1,7 +1,7 @@
-import ngit.maker.recorder.JKeys;
+import ngit.maker.recorder.keyboards.ENativeKeys;
 
 public class Test {
     public static void main(String[] args) {
-        System.out.println(JKeys.F10);
+        System.out.println(ENativeKeys.F10);
     }
 }

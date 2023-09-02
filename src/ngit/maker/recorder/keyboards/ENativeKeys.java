@@ -1,6 +1,6 @@
-package ngit.maker.recorder;
+package ngit.maker.recorder.keyboards;
 
-public enum JKeys {
+public enum ENativeKeys {
     A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,
     K0,K1,K2,K3,K4,K5,K6,K7,K8,K9,
     F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,
@@ -49,28 +49,5 @@ public enum JKeys {
             case RIGHT_ARROW_KEY -> 39;
             case DOWN_ARROW_KEY -> 40;
         };
-    }
-
-    public static int getByName(String s) throws IllegalArgumentException{
-        return JKeys.valueOf(s).getIntValue();
-    }
-}
-
-enum IKeys{
-    ALT,
-    CONTROL,
-    SHIFT,
-    WIN;
-
-    public int getIntValue(){
-        return switch (this){
-            case ALT -> 1;
-            case CONTROL -> 2;
-            case SHIFT -> 4;
-            case WIN -> 8;
-        };
-    }
-    public static int getByName(String s) throws IllegalArgumentException{
-        return IKeys.valueOf(s).getIntValue();
     }
 }
