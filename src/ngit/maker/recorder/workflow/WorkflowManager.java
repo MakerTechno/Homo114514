@@ -61,6 +61,7 @@ public class WorkflowManager extends JFrame {
         frame.setSize(700, 400);
         frame.setLayout(new BorderLayout());
         frame.setLocationRelativeTo(null);//Then frame will be right at the middle of teh screen.
+        frame.setIconImage(IGoodsCollection.getIcon(logger).getImage());
 
         /*Listening on window close to save all works.*/
         frame.addWindowListener(new WindowAdapter() {
