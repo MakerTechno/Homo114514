@@ -2,7 +2,7 @@
   <artifact type="jar" name="Homo114514:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/Homo114514_jar</output-path>
     <root id="archive" name="Homo114514.jar">
-      <element id="module-output" name="Homo114514" />
+      <element id="module-output" name="WorkflowAppByMaker" />
       <element id="extracted-dir" path="$USER_HOME$/Downloads/jintellitype-1.4.1.jar" path-in-jar="/" />
     </root>
   </artifact>

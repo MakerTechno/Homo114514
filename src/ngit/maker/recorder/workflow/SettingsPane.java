@@ -6,41 +6,65 @@ import ngit.maker.recorder.keyboards.GlobalKeyListener;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SettingsPane extends JFrame {
-    public SettingsPane(WorkflowSaver saver){
+    private final WorkflowSaver saver;
+    private final GlobalKeyListener listener;
+    private final Logger logger;
+    private WorkflowSaver.ReadSupplier minimizeHotkey;
+    private WorkflowSaver.ReadSupplier minimizeAvailable;
+    private WorkflowSaver.ReadSupplier undecoratedHotkey;
+    private WorkflowSaver.ReadSupplier undecoratedAvailable;
+    private WorkflowSaver.ReadSupplier exitHotkey;
+    private WorkflowSaver.ReadSupplier exitAvailable;
+    private WorkflowSaver.ReadSupplier saveHotkey;
+    private WorkflowSaver.ReadSupplier saveAvailable;
+    public SettingsPane(WorkflowSaver saver, GlobalKeyListener listener, Logger logger){
+        this.saver = saver;
+        this.listener = listener;
+        this.logger = logger;
         basicSetup(this);
 
-        utilInit(this, saver);
+        utilInit(this);
 
         setVisible(true);
     }
     private void basicSetup(JFrame frame){
-        frame.setSize(400,170);
+        frame.setSize(700,300);
         frame.setLocationRelativeTo(null);
         frame.setUndecorated(false);
         frame.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         frame.setLayout(new GridLayout(8,1,5,5));
     }
 
-    private void utilInit(JFrame frame, WorkflowSaver saver){
+    private void utilInit(JFrame frame){
         frame.add(getHotkeysHeadSet());
         /*Read from properties.*/
-        WorkflowSaver.ReadSupplier minimizeHotkey = saver.readMinimizeHotkey();
-        WorkflowSaver.ReadSupplier minimizeAvailable = saver.readMinimizeAvailable();
+        minimizeHotkey = saver.readMinimizeHotkey();
+        minimizeAvailable = saver.readMinimizeAvailable();
 
-        WorkflowSaver.ReadSupplier undecoratedHotkey = saver.readUndecoratedHotkey();
-        WorkflowSaver.ReadSupplier undecoratedAvailable = saver.readUndecoratedAvailable();
+        undecoratedHotkey = saver.readUndecoratedHotkey();
+        undecoratedAvailable = saver.readUndecoratedAvailable();
 
-        WorkflowSaver.ReadSupplier exitHotkey = saver.readExitHotkey();
-        WorkflowSaver.ReadSupplier exitAvailable = saver.readExitAvailable();
+        exitHotkey = saver.readExitHotkey();
+        exitAvailable = saver.readExitAvailable();
 
-        WorkflowSaver.ReadSupplier saveHotkey = saver.readSaveHotkey();
-        WorkflowSaver.ReadSupplier saveAvailable = saver.readSaveAvailable();
+        saveHotkey = saver.readSaveHotkey();
+        saveAvailable = saver.readSaveAvailable();
 
         /*If anything went wrong, tip for user and read from default.*/
-        if (!(minimizeHotkey.isValid()&&undecoratedHotkey.isValid()&&exitHotkey.isValid()&&saveHotkey.isValid()) &&
-                !(minimizeAvailable.isValid()&&undecoratedAvailable.isValid()&&exitAvailable.isValid()&&saveAvailable.isValid())){
+        if (!(minimizeHotkey.isValid() &&
+                undecoratedHotkey.isValid() &&
+                exitHotkey.isValid() &&
+                saveHotkey.isValid())
+                &&
+                !(minimizeAvailable.isValid() &&
+                undecoratedAvailable.isValid() &&
+                exitAvailable.isValid() &&
+                saveAvailable.isValid())
+        ){
             JOptionPane.showConfirmDialog(frame, "Fatal on key reading! now using default. See more at logs.");
         }
 
@@ -70,7 +94,17 @@ public class SettingsPane extends JFrame {
                 saver.translateKeys(saveHotkey.getObj(), GlobalKeyListener.KEY_TAGS.SAVE_KEY_MARK),
                 saveAvailableB
         );
+
+        JPanel btnS =new JPanel(new GridLayout(1,2,5,5));
+        btnS.add(saveAndExitBtnSetup(setter1, setter2, setter3, setter4, frame));
+        btnS.add(cancelAndExitBtnSetup(frame));
+        JPanel hold2 = new JPanel(new BorderLayout());
+        hold2.add(new JLabel(), BorderLayout.CENTER);
+        hold2.add(btnS,BorderLayout.EAST);
+
         frame.add(setter1);frame.add(setter2);frame.add(setter3);frame.add(setter4);
+        frame.add(new JPanel());frame.add(new JPanel());
+        frame.add(hold2);
     }
 
     private JPanel getHotkeysHeadSet(){
@@ -90,7 +124,76 @@ public class SettingsPane extends JFrame {
                 available);
     }
 
+    private JButton saveAndExitBtnSetup(KeySetter setter1, KeySetter setter2, KeySetter setter3, KeySetter setter4, JFrame frame){
+        JButton button = new JButton("确定");
+        button.setSize(70,30);
+        button.addActionListener(e -> {
+            WorkflowSaver.ReadSupplier rMinimizeHotkey = saver.mixKeys(getModSelect(setter1.mod1), getModSelect(setter1.mod2), getModSelect(setter1.mod3), getKeySelect(setter1.key));
+            WorkflowSaver.ReadSupplier rMinimizeAvailable = WorkflowSaver.ReadSupplier.returnValidOne(String.valueOf(setter1.isAvailable.isSelected()));
 
+            WorkflowSaver.ReadSupplier rUndecoratedHotkey = saver.mixKeys(getModSelect(setter2.mod1), getModSelect(setter2.mod2), getModSelect(setter2.mod3), getKeySelect(setter2.key));
+            WorkflowSaver.ReadSupplier rUndecoratedAvailable = WorkflowSaver.ReadSupplier.returnValidOne(String.valueOf(setter2.isAvailable.isSelected()));
+
+            WorkflowSaver.ReadSupplier rExitHotkey = saver.mixKeys(getModSelect(setter3.mod1), getModSelect(setter3.mod2), getModSelect(setter3.mod3), getKeySelect(setter3.key));
+            WorkflowSaver.ReadSupplier rExitAvailable = WorkflowSaver.ReadSupplier.returnValidOne(String.valueOf(setter3.isAvailable.isSelected()));
+
+            WorkflowSaver.ReadSupplier rSaveHotkey = saver.mixKeys(getModSelect(setter4.mod1), getModSelect(setter4.mod2), getModSelect(setter4.mod3), getKeySelect(setter4.key));
+            WorkflowSaver.ReadSupplier rSaveAvailable = WorkflowSaver.ReadSupplier.returnValidOne(String.valueOf(setter4.isAvailable.isSelected()));
+
+
+            if (!(rMinimizeHotkey.equals(minimizeHotkey) &&
+                    rMinimizeAvailable.equals(minimizeAvailable) &&
+
+                    rUndecoratedHotkey.equals(undecoratedHotkey) &&
+                    rUndecoratedAvailable.equals(undecoratedAvailable) &&
+
+                    rExitHotkey.equals(exitHotkey) &&
+                    rExitAvailable.equals(exitAvailable) &&
+
+                    rSaveHotkey.equals(saveHotkey) &&
+                    rSaveAvailable.equals(saveAvailable))
+            ){
+                if (!(
+                    saver.setMinimizeHotkey(rMinimizeHotkey.getObj()) &&
+                    saver.setMinimizeAvailable(setter1.isAvailable.isSelected()) &&
+
+                    saver.setUndecoratedHotkey(rUndecoratedHotkey.getObj()) &&
+                    saver.setUndecoratedAvailable(setter2.isAvailable.isSelected()) &&
+
+                    saver.setExitHotkey(rExitHotkey.getObj()) &&
+                    saver.setExitAvailable(setter3.isAvailable.isSelected()) &&
+
+                    saver.setSaveHotkey(rSaveHotkey.getObj()) &&
+                    saver.setSaveAvailable(setter4.isAvailable.isSelected())
+                )){
+                    logger.log(Level.SEVERE, "Can't save keys to properties.", new Exception("Unknown"));
+                }
+
+                listener.resetKeys(
+                        setter1.isAvailable.isSelected()?saver.translateKeys(rMinimizeHotkey.getObj(), GlobalKeyListener.KEY_TAGS.MINIMIZE_KEY_MARK):null,
+                        setter2.isAvailable.isSelected()?saver.translateKeys(rUndecoratedHotkey.getObj(), GlobalKeyListener.KEY_TAGS.UNDECORATED_KEY_MARK):null,
+                        setter3.isAvailable.isSelected()?saver.translateKeys(rExitHotkey.getObj(), GlobalKeyListener.KEY_TAGS.EXIT_ALL_KEY_MARK):null,
+                        setter4.isAvailable.isSelected()?saver.translateKeys(rSaveHotkey.getObj(), GlobalKeyListener.KEY_TAGS.SAVE_KEY_MARK):null);
+            }
+            frame.dispose();
+        });
+
+        return button;
+    }
+
+    private JButton cancelAndExitBtnSetup(JFrame frame){
+        JButton button = new JButton("取消");
+        button.setSize(70,30);
+        button.addActionListener(e -> frame.dispose());
+        return button;
+    }
+
+    public EModKeys getModSelect(JComboBox<EModKeys> cb) {
+        return cb.getItemAt(cb.getSelectedIndex());
+    }
+    public ENativeKeys getKeySelect(JComboBox<ENativeKeys> cb) {
+        return cb.getItemAt(cb.getSelectedIndex());
+    }
 }
 
 class KeySetter extends JPanel{
@@ -127,4 +230,5 @@ class KeySetter extends JPanel{
         keysBox.setSelectedItem(reKey);
         return keysBox;
     }
+
 }

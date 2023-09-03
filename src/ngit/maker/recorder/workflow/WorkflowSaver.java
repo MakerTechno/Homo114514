@@ -1,5 +1,7 @@
 package ngit.maker.recorder.workflow;
 
+import ngit.maker.recorder.keyboards.EModKeys;
+import ngit.maker.recorder.keyboards.ENativeKeys;
 import ngit.maker.recorder.keyboards.GlobalKeyListener;
 
 import java.io.*;
@@ -55,6 +57,10 @@ public class WorkflowSaver {
         String getObj();
 
         boolean isValid();
+
+        default boolean equals(ReadSupplier supplier){
+            return Objects.equals(this.getObj(), supplier.getObj()) && (this.isValid() && supplier.isValid());
+        }
 
         static ReadSupplier returnValidOne(final String string) {
             return new ReadSupplier() {
@@ -358,7 +364,6 @@ public class WorkflowSaver {
         String mod2 = kSeparated[1];
         String mod3 = kSeparated[2];
         String apartKey = kSeparated[3];
-        System.out.println(apartKey);
         GlobalKeyListener.IKeyPack keyPack = GlobalKeyListener.IKeyPack.newPack(forType, mod1, mod2, mod3, apartKey);
         try {
             keyPack.translateAllMods();
@@ -375,5 +380,9 @@ public class WorkflowSaver {
         }
 
         return keyPack;
+    }
+
+    public ReadSupplier mixKeys(EModKeys key1, EModKeys key2, EModKeys key3, ENativeKeys keyN){
+        return ReadSupplier.returnValidOne(key1 + "_" + key2 + "_" + key3 + "_" + keyN);
     }
 }

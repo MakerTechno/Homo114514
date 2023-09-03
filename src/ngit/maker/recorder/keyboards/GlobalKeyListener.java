@@ -72,7 +72,9 @@ public class GlobalKeyListener {
     public void resetKeys(IKeyPack keyPackMin, IKeyPack keyPackUnd, IKeyPack keyPackExit, IKeyPack keyPackSave) {
         JIntellitype.getInstance().removeHotKeyListener(hotkeyListener);
         for (IKeyPack keyPack : keyPacks) {
-            JIntellitype.getInstance().unregisterHotKey(keyPack.getKeyMark());
+            if (keyPack != null) {
+                JIntellitype.getInstance().unregisterHotKey(keyPack.getKeyMark());
+            }
         }
 
         keyPacks = new IKeyPack[] {keyPackMin, keyPackUnd, keyPackExit, keyPackSave};

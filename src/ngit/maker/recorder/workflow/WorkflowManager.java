@@ -26,6 +26,8 @@ public class WorkflowManager extends JFrame {
     /*Belows are the dynamics.*/
     /**We need a logger to log for whole sys.*/
     public final Logger logger;
+    /**We need a listener to give action from user.*/
+    public GlobalKeyListener listener;
     /**We need a saver system to save user's records and properties settings, too.*/
     private final WorkflowSaver saver;
     /**This is a recorder list, contains all the text pane that still lives.*/
@@ -92,6 +94,20 @@ public class WorkflowManager extends JFrame {
             }
         }, 0, 1000*60);
 
+        /*FUND ME!!!!!!*/
+        JFrame fundFrame = new JFrame("PLEASE!!!  THANKS!!!");
+        fundFrame.setLayout(new BorderLayout());
+        fundFrame.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        ImageIcon image = IGoodsCollection.getFund(logger);
+        JLabel fundHold = new JLabel(image);
+        fundHold.setOpaque(true);
+        fundHold.setBackground(Color.WHITE);
+        fundFrame.setSize(image.getIconWidth()+50, image.getIconHeight()+fundFrame.getInsets().top+100);
+        fundFrame.setLocationRelativeTo(null);
+
+        fundFrame.add(fundHold, BorderLayout.CENTER);
+        fundFrame.setAlwaysOnTop(true);
+        fundFrame.setVisible(true);
     }
 
 
@@ -289,7 +305,7 @@ public class WorkflowManager extends JFrame {
                     count++;
                 } else count = 0;
             }
-        }, 0, 1000*15);
+        }, 0, 1000*7);
 
         return label;
     }
@@ -297,9 +313,7 @@ public class WorkflowManager extends JFrame {
     private JButton settingsBtnSetup(){
         JButton settings = new JButton(IGoodsCollection.getIcon(logger));
 
-        settings.addActionListener(e -> {
-            new SettingsPane(saver);
-        });
+        settings.addActionListener(e -> new SettingsPane(saver, listener, logger));
         return settings;
     }
 
@@ -339,7 +353,7 @@ public class WorkflowManager extends JFrame {
         };
 
         /*Register keys.*/
-        GlobalKeyListener listener = new GlobalKeyListener(packs[0], packs[1], packs[2], packs[3]);
+        listener = new GlobalKeyListener(packs[0], packs[1], packs[2], packs[3]);
         listener.setKeyListeners(getMinimizeRuns(minimizeBtn), getUndecoratedRuns(undecoratedBtn),
                 getSaveRuns(true), getSaveRuns(false));
     }

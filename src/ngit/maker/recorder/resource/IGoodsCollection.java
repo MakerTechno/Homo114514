@@ -1,6 +1,11 @@
 package ngit.maker.recorder.resource;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -40,7 +45,7 @@ public class IGoodsCollection {
         GOOD_WORDS.add("过去的价值不代表未来的地位。");
         GOOD_WORDS.add("惟有主动付出，才有丰富的果实获得收获。");
         GOOD_WORDS.add("站在死亡面前并不可怕，可怕的是不能牺牲的有所价值。");
-        GOOD_WORDS.add("存在是因为价值创造!淘汰是因为价值丧失。");
+        GOOD_WORDS.add("存在是因为价值创造！淘汰是因为价值丧失。");
         GOOD_WORDS.add("价值的真正意义在于宁愿牺牲自己，也不愿拖累他人的精神。");
         GOOD_WORDS.add("什么都不懂的人是毫无价值的。");
         GOOD_WORDS.add("无私的奉献不仅可以帮助别人，也会在无形中提升自己的价值。");
@@ -53,7 +58,7 @@ public class IGoodsCollection {
         GOOD_WORDS.add("人一生的价值，不应该用时间去衡量，而是用深度去衡量。");
         GOOD_WORDS.add("成功最重要的因素是要有一个健康的身体和旺盛的精力。");
         GOOD_WORDS.add("成功是陡峭的阶梯，两手插在裤袋里是爬不上去的。");
-        GOOD_WORDS.add("成功没有奇迹，只有轨迹；成功不靠条件，只靠信念!");
+        GOOD_WORDS.add("成功没有奇迹，只有轨迹；成功不靠条件，只靠信念！");
         GOOD_WORDS.add("成功就是失败到失败，也丝毫不减当初的热情。");
         GOOD_WORDS.add("成功的关键，在于勇敢承担责任。");
         GOOD_WORDS.add("成功的道路别自己一个人摸索，只有多问路才不会迷路。");
@@ -108,6 +113,23 @@ public class IGoodsCollection {
              ico = new ImageIcon(Objects.requireNonNull(IGoodsCollection.class.getResource("img/ico.png")));
         } catch (NullPointerException e) {
             logger.log(Level.WARNING, "Couldn't load icon image, see more: ", e);
+        }
+        return ico;
+    }
+
+    public static ImageIcon getFund(Logger logger){
+        ImageIcon ico = null;
+        try {
+            ico = new ImageIcon(Objects.requireNonNull(IGoodsCollection.class.getResource("img/subscribe.png")));
+        } catch (NullPointerException e) {
+            logger.log(Level.WARNING, "Couldn't load icon image from source, see more: ", e);
+            String dldTarget = "https://makertechno.github.io/resources/subscribe.png";
+            try {
+                BufferedImage image = ImageIO.read(new URL(dldTarget));
+                ico = new ImageIcon(image);
+            } catch (IOException ex) {
+                logger.log(Level.WARNING, "Couldn't load icon image from url, see more: ", e);
+            }
         }
         return ico;
     }
